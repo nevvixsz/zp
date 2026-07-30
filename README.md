@@ -1,4 +1,3 @@
-```markdown
 <p align="center">
   <h1 align="center">⚡ zp</h1>
   <p align="center">
@@ -137,4 +136,3 @@ zp/
 ## 📄 License
 
 [MIT](LICENSE) © nevvixsz
-```
