@@ -2,12 +2,24 @@ const std = @import("std");
 const runZP = @import("src/runZP.zig").runZP;
 const init_zp = @import("src/init_zp.zig").init_zp;
 
+fn strEql(a: []const u8, b: []const u8) bool {
+    return std.mem.eql(u8, a, b);
+}
+
 pub const Config = struct {
     install: bool = false,
     remove: bool = false,
     update: bool = false,
     search: bool = false,
     init: bool = false,
+
+    fn applyArg(self: *Config, arg: []const u8) void {
+        self.install = strEql(arg, "-i");
+        self.remove = strEql(arg, "-r");
+        self.update = strEql(arg, "-u");
+        self.search = strEql(arg, "-s");
+        self.init = strEql(arg, "--init");
+    }
 };
 
 pub fn main(init: std.process.Init) !void {
@@ -21,11 +33,7 @@ pub fn main(init: std.process.Init) !void {
 
     for (args[1..]) |arg| {
         if (std.mem.startsWith(u8, arg, "-")) {
-            if (std.mem.eql(u8, arg, "-i")) config.install = true;
-            if (std.mem.eql(u8, arg, "-r")) config.remove = true;
-            if (std.mem.eql(u8, arg, "-u")) config.update = true;
-            if (std.mem.eql(u8, arg, "-s")) config.search = true;
-            if (std.mem.eql(u8, arg, "--init")) config.init = true;
+            config.applyArg(arg);
             continue;
         }
         try pkg_list.append(allocator, arg);
