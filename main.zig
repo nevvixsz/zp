@@ -4,7 +4,7 @@ const init_zp = @import("src/init_zp.zig").init_zp;
 const help = @import("src/help.zig").help;
 
 fn strEql(a: []const u8, b: []const u8) bool {
-    return std.mem.eql(a, b);
+    return std.mem.eql(u8, a, b);
 }
 
 pub const Config = struct {
@@ -22,8 +22,8 @@ pub const Config = struct {
         self.update = strEql(arg, "-u");
         self.search = strEql(arg, "-s");
         self.init = strEql(arg, "--init");
-        self.help = strEql(arg, "--help");
-        self.version = strEql(arg, "--version");
+        self.help = strEql(arg, "--help") or strEql(arg, "-h");
+        self.version = strEql(arg, "--version") or strEql(arg, "-v");
     }
 };
 
