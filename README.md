@@ -71,7 +71,7 @@ Requirements: **Zig 0.16**, plus `git`, `curl`, `tar`, `bash`, `awk`, and a C to
 (`gcc` / `make`) for actually building packages.
 
 ```sh
-git clone https://github.com/<your-username>/zp.git
+git clone https://github.com/nevvixsz/zp.git
 cd zp
 zig build-exe main.zig -O ReleaseSafe -femit-bin=zp
 
