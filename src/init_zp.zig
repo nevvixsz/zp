@@ -1,5 +1,6 @@
 const std = @import("std");
 
+/// Init zp
 pub fn init_zp(io: anytype) !void {
     std.debug.print("Init zp...\n", .{});
     const cmd =
@@ -38,7 +39,7 @@ pub fn init_zp(io: anytype) !void {
         \\  while ((p = index(s, from)) > 0) { out = out substr(s, 1, p-1) to; s = substr(s, p+n) }
         \\  return out s
         \\}
-        \\function emit(    s, k, pass, n, parts, name) {
+        \\function emit(    s, k, pass, n, parts, name, ver) {
         \\  if (file == "" || dist == "") return
         \\  s = dist
         \\  for (pass = 0; pass < 3; pass++)
@@ -47,7 +48,9 @@ pub fn init_zp(io: anytype) !void {
         \\  if (s == "" || index(s, "$") || index(s, ">") || index(s, "{") || index(s, "}")) return
         \\  name = pkg
         \\  if (name == "") { n = split(file, parts, "/"); name = parts[n-1] }
-        \\  print name, s
+        \\  ver = V["version"]
+        \\  if (ver == "" || index(ver, "$")) return
+        \\  print name, ver, s
         \\}
         \\{
         \\  raw = $0; c = index(raw, ":")
@@ -70,6 +73,7 @@ pub fn init_zp(io: anytype) !void {
         \\  [ -f "$d/sources" ] || continue
         \\  name=$(basename "$d")
         \\  ver=$(awk '{print $1; exit}' "$d/version" 2>/dev/null)
+        \\  [ -z "$ver" ] && continue
         \\  while IFS= read -r src; do
         \\    case "$src" in
         \\      '') continue ;;
@@ -78,7 +82,7 @@ pub fn init_zp(io: anytype) !void {
         \\    url=${src//VERSION/$ver}
         \\    case "$url" in http://*|https://*) ;; *) continue;; esac
         \\    case "$url" in *.git|*git://*) continue;; esac
-        \\    echo "$name $url"
+        \\    echo "$name $ver $url"
         \\  done < "$d/sources"
         \\done
         \\) > /var/zp/mirrors/.kiss.tmp
@@ -99,7 +103,7 @@ pub fn init_zp(io: anytype) !void {
         \\      url=${url//\$name/$name}
         \\      url=${url//\${name}/$name}
         \\      case "$url" in *.git|*git://*) continue;; esac
-        \\      echo "$name $url"
+        \\      echo "$name $ver $url"
         \\    done
         \\  done
         \\done
@@ -107,12 +111,13 @@ pub fn init_zp(io: anytype) !void {
         \\
         \\echo "zp: merge (dedup by name, priority: void > crux > kiss)..."
         \\cat /var/zp/mirrors/.void.tmp /var/zp/mirrors/.crux.tmp /var/zp/mirrors/.kiss.tmp \
-        \\  | grep -vF '$' | grep -vF '>' | grep -vF '{' | grep -vF '}' | awk '!seen[$1]++' | sort > "$OUT"
+        \\  | grep -vF '$' | grep -vF '>' | grep -vF '{' | grep -vF '}' | awk 'NF >= 3 && !seen[$1]++' | sort > "$OUT"
         \\rm -f /var/zp/mirrors/.void.tmp /var/zp/mirrors/.kiss.tmp /var/zp/mirrors/.crux.tmp
         \\
         \\echo "zp: base ready -> $OUT  (packages: $(wc -l < "$OUT"))"
         \\EOF
         \\chmod +x /var/zp/mirrors/gen.sh
+        \\touch /var/zp/install/packages.db
     ;
     const argv = [_][]const u8{ "sh", "-c", cmd };
     var child = try std.process.spawn(io, .{
