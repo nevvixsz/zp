@@ -14,6 +14,8 @@ pub fn help() void {
         \\  -r <pkg>      Remove an installed package
         \\  -h, --help    Show this help message and exit
         \\  -v, --version Show version information and exit
+        \\  -U, --upgrade Upgrade system packages
+        \\  
         \\
         \\Examples:
         \\  sudo zp --init              # Initialize the package manager
@@ -21,6 +23,8 @@ pub fn help() void {
         \\  sudo zp -s htop             # Search for htop
         \\  sudo zp -i htop             # Build & install htop from source
         \\  sudo zp -r htop             # Remove htop
+        \\  sudo zp -U htop             # Upgrade htop on new version
+        \\  sudo zp -U                  # Upgrade your system
         \\
         \\For more information, visit: https://github.com/nevvixsz/zp
     , .{});
