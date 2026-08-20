@@ -88,12 +88,14 @@ sudo ./zp -u          # clone recipe trees and build the package database
 | `zp -s <pkg>`    | Search for a package in the database               |
 | `zp -i <pkg>`    | Download, build, and install a package             |
 | `zp -r <pkg>`    | Remove an installed package                        |
+| `zp -U <pkg>`    | Upgrade pkg or system                              |
 
 ```sh
 sudo ./zp -u              # sync the database (Void + Crux + KISS)
 sudo ./zp -s htop         # is htop available?
 sudo ./zp -i htop         # build & install htop from source
 sudo ./zp -r htop         # remove it
+sudo ./zp -U              # Upgrade system (or sudo ./zp -U htop)
 ```
 
 ## 📁 Filesystem layout
@@ -112,6 +114,7 @@ sudo ./zp -r htop         # remove it
 zp/
 ├── main.zig          # entry point, argument parsing, config
 ├── src/
+│   ├── get.zig       # Get package stat (name, version, url)
 │   └── runZP.zig     # install / remove / search / update logic
 ├── LICENSE           # MIT
 └── README.md
