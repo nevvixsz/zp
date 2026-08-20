@@ -29,6 +29,8 @@ upstream sources at once**.
 > ⚠️ **Early stage / learning project.** `zp` is a work in progress and a personal
 > daily-driver experiment. Not production-ready — use at your own risk.
 
+<img width="912" height="393" alt="Image" src="https://github.com/user-attachments/assets/1066ecab-7f91-4cfd-a609-193126cca45d" />
+
 ## ✨ Features
 
 - 🔨 **Source-based installs** — `fetch → unpack → build → install`, fully from source
