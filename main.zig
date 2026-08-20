@@ -15,12 +15,14 @@ pub const Config = struct {
     init: bool = false,
     help: bool = false,
     version: bool = false,
+    Upgrade: bool = false,
 
     fn regArg(self: *Config, arg: []const u8) void {
-        self.install = strEql(arg, "-i");
-        self.remove = strEql(arg, "-r");
-        self.update = strEql(arg, "-u");
-        self.search = strEql(arg, "-s");
+        self.install = strEql(arg, "-i") or strEql(arg, "--install");
+        self.remove = strEql(arg, "-r") or strEql(arg, "--remove");
+        self.update = strEql(arg, "-u") or strEql(arg, "--update");
+        self.search = strEql(arg, "-s") or strEql(arg, "--search");
+        self.Upgrade = strEql(arg, "-U") or strEql(arg, "--upgrade");
         self.init = strEql(arg, "--init");
         self.help = strEql(arg, "--help") or strEql(arg, "-h");
         self.version = strEql(arg, "--version") or strEql(arg, "-v");
@@ -29,7 +31,6 @@ pub const Config = struct {
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.arena.allocator();
-    const io = init.io;
     var args = try init.minimal.args.toSlice(allocator);
     var pkg_list: std.ArrayList([]const u8) = .empty;
     defer pkg_list.deinit(allocator);
@@ -45,7 +46,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     if (config.init) {
-        try init_zp(io);
+        try init_zp(init.io);
     }
 
     if (config.help) {
@@ -59,10 +60,10 @@ pub fn main(init: std.process.Init) !void {
     }
 
     if (pkg_list.items.len == 0) {
-        help();
+        try pkg_list.append(allocator, "none-package");
     }
 
     for (pkg_list.items) |pkg| {
-        try runZP(io, pkg, config);
+        try runZP(init, pkg, config);
     }
 }
