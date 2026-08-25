@@ -16,6 +16,7 @@ pub const Config = struct {
     help: bool = false,
     version: bool = false,
     Upgrade: bool = false,
+    list: bool = false,
 
     fn regArg(self: *Config, arg: []const u8) void {
         self.install = strEql(arg, "-i") or strEql(arg, "--install");
@@ -26,6 +27,7 @@ pub const Config = struct {
         self.init = strEql(arg, "--init");
         self.help = strEql(arg, "--help") or strEql(arg, "-h");
         self.version = strEql(arg, "--version") or strEql(arg, "-v");
+        self.list = strEql(arg, "-l") or strEql(arg, "--list");
     }
 };
 
@@ -64,6 +66,6 @@ pub fn main(init: std.process.Init) !void {
     }
 
     for (pkg_list.items) |pkg| {
-        try runZP(init, pkg, config);
+        try runZP(init, pkg, config, allocator);
     }
 }
