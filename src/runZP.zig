@@ -3,6 +3,7 @@ const Config = @import("../main.zig").Config;
 const getName = @import("get.zig").getName;
 const getInstalledVersion = @import("get.zig").getInstalledVersion;
 const GetPkgStatToInstall = @import("get.zig").GetPkgStatToInstall;
+const GetInstalledPkgs = @import("get.zig").GetInstalledPkgs;
 
 pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void {
     var child = try std.process.spawn(io, .{
@@ -37,6 +38,9 @@ pub fn runInstall(init: std.process.Init, pkg_item: []const u8) !void {
         \\P=/usr
         \\D={s}
         \\mkdir -p "$D"
+        \\if [ ! -x ./configure ] && { [ -f configure.ac ] || [ -f configure.in ]; }; then
+        \\  if [ -x ./autogen.sh ]; then ./autogen.sh; else autoreconf -fi; fi
+        \\fi
         \\if [ -x ./configure ]; then
         \\  ./configure --prefix=$P
         \\  make -j$(nproc)
@@ -155,7 +159,7 @@ fn upgradeAll(init: std.process.Init, buffer: []u8) !void {
     }
 }
 
-pub fn runZP(init: std.process.Init, pkg_item: []const u8, config: Config) !void {
+pub fn runZP(init: std.process.Init, pkg_item: []const u8, config: Config, allocator: anytype) !void {
     if (config.Upgrade) {
         var buffer: [4096]u8 = undefined;
         const argv = [_][]const u8{ "sh", "-c", "/var/zp/mirrors/gen.sh" };
@@ -165,6 +169,18 @@ pub fn runZP(init: std.process.Init, pkg_item: []const u8, config: Config) !void
             try upgradePackage(init, pkg_item, &buffer);
         } else {
             try upgradeAll(init, &buffer);
+        }
+    }
+
+    if (config.list) {
+        var buffer: [8096]u8 = undefined;
+        const massive: std.ArrayList([]const u8) = try GetInstalledPkgs(init.io, &buffer, allocator);
+        if (massive.items.len == 0) {
+            std.debug.print("No pkgs installed.", .{});
+        } else {
+            for (massive.items) |i| {
+                std.debug.print("{s}\n", .{i});
+            }
         }
     }
 
