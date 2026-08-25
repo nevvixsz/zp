@@ -51,3 +51,19 @@ pub fn getInstalledVersion(io: anytype, pkg: []const u8, buffer: []u8) !?[]const
     }
     return null;
 }
+
+pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: anytype) !std.ArrayList([]const u8) {
+    const file = try std.Io.Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{});
+    defer file.close(io);
+    var massive: std.ArrayList([]const u8) = .empty;
+    defer massive.deinit(allocator);
+
+    var reader = file.reader(io, buffer);
+    while (try reader.interface.takeDelimiter('\n')) |line| {
+        var tokens = std.mem.tokenizeScalar(u8, line, ' ');
+
+        const name = tokens.next() orelse continue;
+        try massive.append(allocator, name);
+    }
+    return massive;
+}
