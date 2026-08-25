@@ -15,6 +15,7 @@ pub fn help() void {
         \\  -h, --help    Show this help message and exit
         \\  -v, --version Show version information and exit
         \\  -U, --upgrade Upgrade system packages
+        \\  -l, --list    Print your installed pkgs
         \\  
         \\
         \\Examples:
@@ -25,6 +26,7 @@ pub fn help() void {
         \\  sudo zp -r htop             # Remove htop
         \\  sudo zp -U htop             # Upgrade htop on new version
         \\  sudo zp -U                  # Upgrade your system
+        \\  sudo zp -l                  # Print your installed pkgs
         \\
         \\For more information, visit: https://github.com/nevvixsz/zp
     , .{});
