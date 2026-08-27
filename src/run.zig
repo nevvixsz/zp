@@ -159,7 +159,7 @@ fn upgradeAll(init: std.process.Init, buffer: []u8) !void {
     }
 }
 
-pub fn runZP(init: std.process.Init, pkg_item: []const u8, config: Config, allocator: anytype) !void {
+pub fn run(init: std.process.Init, pkg_item: []const u8, config: Config, allocator: anytype) !void {
     if (config.Upgrade) {
         var buffer: [4096]u8 = undefined;
         const argv = [_][]const u8{ "sh", "-c", "/var/zp/mirrors/gen.sh" };

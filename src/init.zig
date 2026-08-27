@@ -1,7 +1,7 @@
 const std = @import("std");
 
 /// Init zp
-pub fn init_zp(io: anytype) !void {
+pub fn init(io: anytype) !void {
     std.debug.print("Init zp...\n", .{});
     const cmd =
         \\mkdir -p /var/zp/build /var/zp/install /var/zp/mirrors /var/zp/pkg

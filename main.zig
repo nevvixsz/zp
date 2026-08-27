@@ -1,6 +1,6 @@
 const std = @import("std");
-const runZP = @import("src/runZP.zig").runZP;
-const init_zp = @import("src/init_zp.zig").init_zp;
+const run = @import("src/run.zig").run;
+const init = @import("src/init.zig").init;
 const help = @import("src/help.zig").help;
 
 fn strEql(a: []const u8, b: []const u8) bool {
