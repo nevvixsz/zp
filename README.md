@@ -75,7 +75,7 @@ Requirements: **Zig 0.16**, plus `git`, `curl`, `tar`, `bash`, `awk`, and a C to
 ```sh
 git clone https://github.com/nevvixsz/zp.git
 cd zp
-zig build-exe main.zig -O ReleaseSafe -femit-bin=zp
+zig build -O ReleaseSafe
 
 sudo ./zp --init      # create /var/zp/{build,install,mirrors,pkg} and generate gen.sh
 sudo ./zp -u          # clone recipe trees and build the package database
