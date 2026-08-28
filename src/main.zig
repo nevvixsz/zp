@@ -1,7 +1,7 @@
 const std = @import("std");
-const runZP = @import("src/runZP.zig").runZP;
-const init_zp = @import("src/init_zp.zig").init_zp;
-const help = @import("src/help.zig").help;
+const run = @import("run.zig").run;
+const help = @import("help.zig").help;
+const initialize = @import("init.zig").initialize;
 
 fn strEql(a: []const u8, b: []const u8) bool {
     return std.mem.eql(u8, a, b);
@@ -48,7 +48,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     if (config.init) {
-        try init_zp(init.io);
+        try initialize(init.io);
     }
 
     if (config.help) {
@@ -66,6 +66,6 @@ pub fn main(init: std.process.Init) !void {
     }
 
     for (pkg_list.items) |pkg| {
-        try runZP(init, pkg, config, allocator);
+        try run(init, pkg, config, allocator);
     }
 }

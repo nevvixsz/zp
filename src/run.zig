@@ -1,5 +1,5 @@
 const std = @import("std");
-const Config = @import("../main.zig").Config;
+const Config = @import("main.zig").Config;
 const getName = @import("get.zig").getName;
 const getInstalledVersion = @import("get.zig").getInstalledVersion;
 const GetPkgStatToInstall = @import("get.zig").GetPkgStatToInstall;
@@ -38,7 +38,7 @@ pub fn runInstall(init: std.process.Init, pkg_item: []const u8) !void {
         \\P=/usr
         \\D={s}
         \\mkdir -p "$D"
-        \\if [ ! -x ./configure ] && { [ -f configure.ac ] || [ -f configure.in ]; }; then
+        \\if [ ! -x ./configure ] && {{ [ -f configure.ac ] || [ -f configure.in ]; }}; then
         \\  if [ -x ./autogen.sh ]; then ./autogen.sh; else autoreconf -fi; fi
         \\fi
         \\if [ -x ./configure ]; then
@@ -159,7 +159,7 @@ fn upgradeAll(init: std.process.Init, buffer: []u8) !void {
     }
 }
 
-pub fn runZP(init: std.process.Init, pkg_item: []const u8, config: Config, allocator: anytype) !void {
+pub fn run(init: std.process.Init, pkg_item: []const u8, config: Config, allocator: anytype) !void {
     if (config.Upgrade) {
         var buffer: [4096]u8 = undefined;
         const argv = [_][]const u8{ "sh", "-c", "/var/zp/mirrors/gen.sh" };
