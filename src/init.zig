@@ -1,8 +1,8 @@
 const std = @import("std");
 
-/// Init zp
-pub fn init(io: anytype) !void {
-    std.debug.print("Init zp...\n", .{});
+pub fn initialize(io: anytype) !void {
+    std.debug.print("Initializing zp...\n", .{});
+
     const cmd =
         \\mkdir -p /var/zp/build /var/zp/install /var/zp/mirrors /var/zp/pkg
         \\cat << 'EOF' > /var/zp/mirrors/gen.sh
@@ -119,6 +119,7 @@ pub fn init(io: anytype) !void {
         \\chmod +x /var/zp/mirrors/gen.sh
         \\touch /var/zp/install/packages.db
     ;
+
     const argv = [_][]const u8{ "sh", "-c", cmd };
     var child = try std.process.spawn(io, .{
         .argv = &argv,
