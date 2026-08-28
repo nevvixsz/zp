@@ -38,7 +38,7 @@ pub fn runInstall(init: std.process.Init, pkg_item: []const u8) !void {
         \\P=/usr
         \\D={s}
         \\mkdir -p "$D"
-        \\if [ ! -x ./configure ] && { [ -f configure.ac ] || [ -f configure.in ]; }; then
+        \\if [ ! -x ./configure ] && {{ [ -f configure.ac ] || [ -f configure.in ]; }}; then
         \\  if [ -x ./autogen.sh ]; then ./autogen.sh; else autoreconf -fi; fi
         \\fi
         \\if [ -x ./configure ]; then
