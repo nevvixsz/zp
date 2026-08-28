@@ -1,5 +1,5 @@
 const std = @import("std");
-const Config = @import("../main.zig").Config;
+const Config = @import("main.zig").Config;
 const getName = @import("get.zig").getName;
 const getInstalledVersion = @import("get.zig").getInstalledVersion;
 const GetPkgStatToInstall = @import("get.zig").GetPkgStatToInstall;
