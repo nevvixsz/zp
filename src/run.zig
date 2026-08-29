@@ -1,9 +1,10 @@
 const std = @import("std");
 const Config = @import("main.zig").Config;
-const getName = @import("get.zig").getName;
-const getInstalledVersion = @import("get.zig").getInstalledVersion;
-const GetPkgStatToInstall = @import("get.zig").GetPkgStatToInstall;
-const GetInstalledPkgs = @import("get.zig").GetInstalledPkgs;
+const getName = @import("modules.zig").getName;
+const getInstalledVersion = @import("modules.zig").getInstalledVersion;
+const GetPkgStatToInstall = @import("modules.zig").GetPkgStatToInstall;
+const GetInstalledPkgs = @import("modules.zig").GetInstalledPkgs;
+const createDir = @import("modules.zig").createDir;
 
 pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void {
     var child = try std.process.spawn(io, .{
@@ -23,8 +24,10 @@ pub fn runInstall(init: std.process.Init, pkg_item: []const u8) !void {
     const argv = [_][]const u8{ "curl", "-fSL", "-o", file_name, pkg.url };
     try runProcess(init.io, &argv, "/var/zp/install/");
 
-    var tar_cmd_buf: [1024]u8 = undefined;
-    const tar_cmd = try std.fmt.bufPrint(&tar_cmd_buf, "mkdir -p /var/zp/build/{s} && tar -xf /var/zp/install/{s} -C /var/zp/build/{s} --strip-components=1", .{ pkg_item, file_name, pkg_item });
+    var tar_cmd_buf: [8096]u8 = undefined;
+
+    try createDir(init.io, try std.fmt.bufPrint(&tar_cmd_buf, "/var/zp/build/{s}", .{pkg_item}));
+    const tar_cmd = try std.fmt.bufPrint(&tar_cmd_buf, "tar -xf /var/zp/install/{s} -C /var/zp/build/{s} --strip-components=1", .{ file_name, pkg_item });
     const argv_tar = [_][]const u8{ "sh", "-c", tar_cmd };
     try runProcess(init.io, &argv_tar, "/var/zp/install/");
 
