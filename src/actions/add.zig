@@ -1,9 +1,5 @@
 const std = @import("std");
-const Config = @import("main.zig").Config;
-const getName = @import("get.zig").getName;
-const getInstalledVersion = @import("get.zig").getInstalledVersion;
-const GetPkgStatToInstall = @import("get.zig").GetPkgStatToInstall;
-const GetInstalledPkgs = @import("get.zig").GetInstalledPkgs;
+const p= @import("../parser.zig");
 
 pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void {
     var child = try std.process.spawn(io, .{
@@ -16,9 +12,9 @@ pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void
     _ = try child.wait(io);
 }
 
-pub fn runInstall(init: std.process.Init, pkg_item: []const u8) !void {
+pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
     var buf: [4096]u8 = undefined;
-    const pkg = try GetPkgStatToInstall(init.io, pkg_item, &buf);
+    const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf);
     const file_name = if (std.mem.lastIndexOfScalar(u8, pkg.url, '/')) |i| pkg.url[i + 1 ..] else pkg.url;
     const argv = [_][]const u8{ "curl", "-fSL", "-o", file_name, pkg.url };
     try runProcess(init.io, &argv, "/var/zp/install/");
@@ -123,87 +119,4 @@ pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8,
         .cwd = .{ .path = "/" },
     });
     _ = try child.wait(init.io);
-}
-
-fn upgradePackage(init: std.process.Init, pkg_name: []const u8, buffer: []u8) !void {
-    const installed_ver = try getInstalledVersion(init.io, pkg_name, buffer);
-    if (installed_ver) |iv| {
-        const pkg = try GetPkgStatToInstall(init.io, pkg_name, buffer);
-        if (!std.mem.eql(u8, iv, pkg.version)) {
-            std.debug.print("Updating {s}: {s} → {s}\n", .{ pkg_name, iv, pkg.version });
-            try runInstall(init, pkg_name);
-        } else {
-            std.debug.print("{s} is up to date ({s})\n", .{ pkg_name, iv });
-        }
-    } else {
-        std.debug.print("Package '{s}' is not installed\n", .{pkg_name});
-    }
-}
-
-fn upgradeAll(init: std.process.Init, buffer: []u8) !void {
-    const file = std.Io.Dir.cwd().openFile(init.io, "/var/zp/install/packages.db", .{}) catch |err| {
-        if (err == error.FileNotFound) {
-            std.debug.print("No installed packages found\n", .{});
-            return;
-        }
-        return err;
-    };
-    defer file.close(init.io);
-
-    var reader = file.reader(init.io, buffer);
-    while (try reader.interface.takeDelimiter('\n')) |line| {
-        if (line.len == 0) continue;
-        var tokens = std.mem.tokenizeScalar(u8, line, ' ');
-        const pkg_name = tokens.next() orelse continue;
-        try upgradePackage(init, pkg_name, buffer);
-    }
-}
-
-pub fn run(init: std.process.Init, pkg_item: []const u8, config: Config, allocator: anytype) !void {
-    if (config.Upgrade) {
-        var buffer: [4096]u8 = undefined;
-        const argv = [_][]const u8{ "sh", "-c", "/var/zp/mirrors/gen.sh" };
-        try runProcess(init.io, &argv, ".");
-
-        if (pkg_item.len > 0 and !std.mem.eql(u8, pkg_item, "none-package")) {
-            try upgradePackage(init, pkg_item, &buffer);
-        } else {
-            try upgradeAll(init, &buffer);
-        }
-    }
-
-    if (config.list) {
-        var buffer: [8096]u8 = undefined;
-        const massive: std.ArrayList([]const u8) = try GetInstalledPkgs(init.io, &buffer, allocator);
-        if (massive.items.len == 0) {
-            std.debug.print("No pkgs installed.", .{});
-        } else {
-            for (massive.items) |i| {
-                std.debug.print("{s}\n", .{i});
-            }
-        }
-    }
-
-    if (config.search) {
-        var buffer: [4096]u8 = undefined;
-        const find = try getName(init.io, pkg_item, &buffer);
-        if (!find) {
-            std.debug.print("No find '{s}'\n", .{pkg_item});
-        } else std.debug.print("Find '{s}'\n", .{pkg_item});
-    }
-    if (config.update) {
-        const argv = [_][]const u8{ "sh", "-c", "/var/zp/mirrors/gen.sh" };
-        try runProcess(init.io, &argv, ".");
-    }
-
-    if (config.install) {
-        try runInstall(init, pkg_item);
-    } else if (config.remove) {
-        if (std.mem.eql(u8, pkg_item, "none-package")) return;
-        var cmd_remove: [4096]u8 = undefined;
-        const remove_cmd = try std.fmt.bufPrint(&cmd_remove, "rm -rf /usr/bin/{s} /var/zp/pkg/{s} /usr/local/bin/{s} /usr/local/share/man/man1/{s}.1", .{ pkg_item, pkg_item, pkg_item, pkg_item });
-        const argv_remove = [_][]const u8{ "sh", "-c", remove_cmd };
-        try runProcess(init.io, &argv_remove, "/");
-        std.debug.print("Successful uninstalled pkg: {s}\n", .{pkg_item});
-    }
 }

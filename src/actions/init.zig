@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn initialize(io: anytype) !void {
+pub fn init(io: anytype) !void {
     std.debug.print("Initializing zp...\n", .{});
 
     const cmd =
