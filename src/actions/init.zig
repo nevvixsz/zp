@@ -3,11 +3,16 @@ const std = @import("std");
 pub fn init(io: anytype) !void {
     std.debug.print("Initializing zp...\n", .{});
 
+    try createDir(io, "/var/zp/build");
+    try createDir(io, "/var/zp/install");
+    try createDir(io, "/var/zp/mirrors");
+    try createDir(io, "/var/zp/pkg");
+
+    const file = try std.Io.Dir.cwd().createFile(io, "/var/zp/mirrors/gen.sh", .{});
+    defer file.close(io);
+
     const cmd =
-        \\mkdir -p /var/zp/build /var/zp/install /var/zp/mirrors /var/zp/pkg
-        \\cat << 'EOF' > /var/zp/mirrors/gen.sh
         \\#!/usr/bin/env bash
-        \\# gen.sh — multi-source base generator (Void + Crux + KISS) with dedup. No arguments.
         \\set -u
         \\VOID_URL="https://github.com/void-linux/void-packages"
         \\KISS_URL="https://github.com/kisslinux/repo"
@@ -115,18 +120,24 @@ pub fn init(io: anytype) !void {
         \\rm -f /var/zp/mirrors/.void.tmp /var/zp/mirrors/.kiss.tmp /var/zp/mirrors/.crux.tmp
         \\
         \\echo "zp: base ready -> $OUT  (packages: $(wc -l < "$OUT"))"
-        \\EOF
-        \\chmod +x /var/zp/mirrors/gen.sh
-        \\touch /var/zp/install/packages.db
     ;
+    //chmod +x /var/zp/mirrors/gen.sh
+    //touch /var/zp/install/packages.db
+    const stat = try file.stat(io);
+    const size = stat.size;
+    try file.writePositionalAll(io, cmd, size);
+    try file.setPermissions(io, std.Io.File.Permissions.fromMode(0o755));
 
-    const argv = [_][]const u8{ "sh", "-c", cmd };
-    var child = try std.process.spawn(io, .{
-        .argv = &argv,
-        .cwd = .{ .path = "/" },
-        .stdout = .inherit,
-        .stderr = .inherit,
-    });
-    _ = try child.wait(io);
+    const packages = try std.Io.Dir.cwd().createFile(io, "/var/zp/install/packages.db", .{});
+    defer packages.close(io);
+
     std.debug.print("Done.\n", .{});
+}
+
+pub fn createDir(io: anytype, path: []const u8) !void {
+    const dir_create: std.Io.Dir = std.Io.Dir.cwd();
+    dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
 }

@@ -67,3 +67,11 @@ pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: anytype) !std.Arra
     }
     return massive;
 }
+
+pub fn createDir(io: anytype, path: []const u8) !void {
+    const dir_create: std.Io.Dir = std.Io.Dir.cwd();
+    dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+}
