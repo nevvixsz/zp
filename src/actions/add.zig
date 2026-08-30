@@ -97,10 +97,11 @@ pub fn createDirPath(io: anytype, base_dir: std.Io.Dir, path: []const u8) !void 
     }
 }
 
-pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest_dir: std.Io.Dir, dest_path_prefix: []const u8) !void {
+pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest_dir: std.Io.Dir, dest_path_prefix: []const u8, list_file: std.Io.File) !void {
     var walker = try src_dir.walk(allocator);
     defer walker.deinit();
 
+    var write_pos: u64 = 0;
     while (try walker.next(io)) |entry| {
         var dest_path_buf: [8096]u8 = undefined;
         const dest_path = if (dest_path_prefix.len == 0 or std.mem.eql(u8, dest_path_prefix, "."))
@@ -109,7 +110,13 @@ pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest
             try std.fmt.bufPrint(&dest_path_buf, "{s}/{s}", .{ dest_path_prefix, entry.path });
 
         switch (entry.kind) {
-            .file => try entry.dir.copyFile(entry.basename, dest_dir, dest_path, io, .{}),
+            .file => {
+                try entry.dir.copyFile(entry.basename, dest_dir, dest_path, io, .{});
+                var abs_path_buf: [4096]u8 = undefined;
+                const abs_path = try std.fmt.bufPrint(&abs_path_buf, "/{s}\n", .{dest_path});
+                _ = try list_file.writePositionalAll(io, abs_path, write_pos);
+                write_pos += abs_path.len;
+            },
             .directory => try createDirPath(io, dest_dir, dest_path),
             else => continue,
         }
@@ -140,7 +147,18 @@ pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
     var root_dir = try std.Io.Dir.openDirAbsolute(init.io, "/", .{});
     defer root_dir.close(init.io);
 
-    try copy(init.io, init.arena.allocator(), pkg_dir, root_dir, "");
+    var list_path_buf: [256]u8 = undefined;
+    const list_path = try std.fmt.bufPrint(&list_path_buf, "/var/zp/installed/{s}.list", .{pkg_item});
+
+    std.Io.Dir.cwd().createDir(init.io, "/var/zp/installed", .default_dir) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+
+    const list_file = try std.Io.Dir.cwd().createFile(init.io, list_path, .{ .truncate = true });
+    defer list_file.close(init.io);
+
+    try copy(init.io, init.arena.allocator(), pkg_dir, root_dir, "", list_file);
     var cmd: [4096]u8 = undefined;
     try removePkgEntry(init, "/var/zp/install/packages.db", pkg_item, &cmd);
 
