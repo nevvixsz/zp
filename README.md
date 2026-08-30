@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">⚡ zp</h1>
+  <h1 align="center">zp</h1>
   <p align="center">
     A minimal, source-based package manager written in <a href="https://ziglang.org">Zig</a>.
     <br />
@@ -15,7 +15,7 @@
 
 ---
 
-## 📖 About
+## About
 
 **`zp`** is a small, source-based, ports-style package manager written in Zig.
 
@@ -31,19 +31,19 @@ upstream sources at once**.
 
 <img width="633" height="723" alt="Image" src="https://github.com/user-attachments/assets/8c19a91d-dfe1-4f06-aff9-68ed180a0369" />
 
-## ✨ Features
+## Features
 
-- 🔨 **Source-based installs** — `fetch → unpack → build → install`, fully from source
-- 🔍 **Build-system auto-detection** — `configure` (autotools), `make`, `cmake`, `meson`
-- 🌐 **Multi-source package database** — aggregates recipes from **Void**, **Crux**, and **KISS**
-- 🧹 **Deterministic dedup** — one name = one package, with source priority `void > crux > kiss`
-- ⚡ **Written in Zig** — compiles to a single static binary
-- 🧩 **Minimal by design** — does a few things and stays out of your way
+- **Source-based installs** — `fetch → unpack → build → install`, fully from source
+- **Build-system auto-detection** — `configure` (autotools), `make`, `cmake`, `meson`
+- **Multi-source package database** — aggregates recipes from **Void**, **Crux**, and **KISS**
+- **Deterministic dedup** — one name = one package, with source priority `void > crux > kiss`
+- **Written in Zig** — compiles to a single static binary
+- **Minimal by design** — does a few things and stays out of your way
 
-## 🏗️ How it works
+## How it works
 
 ```
-zp -i <pkg>
+zp add <pkg>
    │
    ├─ 1. look up <pkg> in /var/zp/mirrors/zp.packages   (name → url)
    ├─ 2. curl the source tarball into /var/zp/install/
@@ -67,7 +67,7 @@ which is created on `zp --init`. It:
 4. merges everything with an `awk` dedup pass — **first source wins**, so the
    priority order is `void > crux > kiss`.
 
-## 📦 Installation
+## Installation
 
 Requirements: **Zig 0.16**, plus `git`, `curl`, `tar`, `bash`, `awk`, and a C toolchain
 (`gcc` / `make`) for actually building packages.
@@ -81,7 +81,7 @@ sudo ./zp --init      # create /var/zp/{build,install,mirrors,pkg} and generate 
 sudo ./zp -u          # clone recipe trees and build the package database
 ```
 
-## 🚀 Usage
+## Usage
 
 | Command          | Description                                        |
 |------------------|----------------------------------------------------|
@@ -103,13 +103,13 @@ sudo ./zp remove htop     # remove it
 sudo ./zp update          # Upgrade system (or sudo ./zp update htop)
 ```
 
-## 🙏 Inspiration
+## Inspiration
 
 - [Crux Linux](https://crux.nu) — the ports model
 - [KISS Linux](https://kisslinux.org) — radical simplicity
 - [Void Linux](https://voidlinux.org) — `xbps-src` and the recipe tree
 - [Zig](https://ziglang.org) — the language
 
-## 📄 License
+## License
 
 [MIT](LICENSE) © nevvixsz
