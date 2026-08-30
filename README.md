@@ -29,7 +29,7 @@ upstream sources at once**.
 > ⚠️ **Early stage / learning project.** `zp` is a work in progress and a personal
 > daily-driver experiment. Not production-ready — use at your own risk.
 
-<img width="912" height="393" alt="Image" src="https://github.com/user-attachments/assets/1066ecab-7f91-4cfd-a609-193126cca45d" />
+<img width="633" height="723" alt="Image" src="https://github.com/user-attachments/assets/8c19a91d-dfe1-4f06-aff9-68ed180a0369" />
 
 ## ✨ Features
 
