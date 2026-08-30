@@ -85,51 +85,23 @@ sudo ./zp -u          # clone recipe trees and build the package database
 
 | Command          | Description                                        |
 |------------------|----------------------------------------------------|
-| `zp --init`      | Initialize `/var/zp` and generate `gen.sh`         |
-| `zp -u`          | Update recipe trees and regenerate the database    |
-| `zp -s <pkg>`    | Search for a package in the database               |
-| `zp -i <pkg>`    | Download, build, and install a package             |
-| `zp -r <pkg>`    | Remove an installed package                        |
-| `zp -U <pkg>`    | Upgrade pkg or system                              |
+| `zp help`        | Show help message                                  |
+| `zp init`        | Initialize `/var/zp` and generate `gen.sh`         |
+| `zp sync`        | Update recipe trees and regenerate the database    |
+| `zp search <pkg>`| Search for a package in the database               |
+| `zp add <pkg>`   | Download, build, and install a package             |
+| `zp remove <pkg>`| Remove an installed package                        |
+| `zp update <pkg>`| Upgrade pkg or system                              |
+| `zp list`        | Print your installed pkgs                          |
+| `zp version`     | Show version information                           |
 
 ```sh
-sudo ./zp -u              # sync the database (Void + Crux + KISS)
-sudo ./zp -s htop         # is htop available?
-sudo ./zp -i htop         # build & install htop from source
-sudo ./zp -r htop         # remove it
-sudo ./zp -U              # Upgrade system (or sudo ./zp -U htop)
+sudo ./zp sync            # sync the database (Void + Crux + KISS)
+sudo ./zp search htop     # is htop available?
+sudo ./zp add htop        # build & install htop from source
+sudo ./zp remove htop     # remove it
+sudo ./zp update          # Upgrade system (or sudo ./zp update htop)
 ```
-
-## 📁 Filesystem layout
-
-```
-/var/zp/
-├── build/       # unpacked sources (one dir per package)
-├── install/     # downloaded tarballs (cache)
-├── mirrors/     # recipe trees (void/crux/kiss) + gen.sh + zp.packages
-└── pkg/         # DESTDIR staging box (make install lands here)
-```
-
-## 🗂️ Project structure
-
-```
-zp/
-├── main.zig          # entry point, argument parsing, config
-├── src/
-│   ├── get.zig       # Get package stat (name, version, url)
-│   └── runZP.zig     # install / remove / search / update logic
-├── LICENSE           # MIT
-└── README.md
-```
-
-## 🗺️ Roadmap
-
-- [ ] Dependency resolution (`depends` field, recursive install)
-- [ ] File-list based removal (clean uninstall: manpages, `.desktop`, libs)
-- [ ] Per-package install tracking (`installed.list` / metadata)
-- [ ] `--prefix` flag (install to `/` vs a sandbox root)
-- [ ] sha256 checksum verification
-- [ ] Native Zig database generator (replace `gen.sh`, parallel parsing)
 
 ## 🙏 Inspiration
 
