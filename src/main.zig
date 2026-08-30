@@ -72,14 +72,12 @@ pub fn main(init: std.process.Init) !void {
             try u.updateAll(init);
         } else {
             for (pkgs.items) |pkg| {
-                try u.updatePkg(init, pkg);
+                try u.updatePkg(init, pkg, allocator);
             }
         },
         .list => try list(init, allocator),
         .search => for (pkgs.items) |pkg| {
-            std.debug.print("Package {s}:\n", .{pkg});
             try search(init, pkg);
-            std.debug.print("\n\n", .{});
         },
     }
 }

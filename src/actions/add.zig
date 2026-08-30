@@ -117,7 +117,7 @@ pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest
 }
 pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
     var buf: [4096]u8 = undefined;
-    const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf);
+    const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf, init.arena.allocator());
     const file_name = if (std.mem.lastIndexOfScalar(u8, pkg.url, '/')) |i| pkg.url[i + 1 ..] else pkg.url;
     const argv = [_][]const u8{ "curl", "-fSL", "-o", file_name, pkg.url };
     try runProcess(init.io, &argv, "/var/zp/install/");
@@ -192,10 +192,7 @@ pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8,
         const size = stat_file.size;
         _ = try tmp_file.writePositionalAll(init.io, line_with_newline, size);
     }
-    const argv = [_][]const u8{ "mv", tmp_path, file };
-    var child = try std.process.spawn(init.io, .{
-        .argv = &argv,
-        .cwd = .{ .path = "/" },
-    });
-    _ = try child.wait(init.io);
+
+    const cwd = std.Io.Dir.cwd();
+    try cwd.rename(tmp_path, cwd, file, init.io);
 }
