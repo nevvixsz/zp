@@ -1,5 +1,7 @@
 const std = @import("std");
-const p= @import("../parser.zig");
+const p = @import("../parser.zig");
+
+const BuildSystem = enum { autotools, cmake, meson, make, unknown };
 
 pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void {
     var child = try std.process.spawn(io, .{
@@ -12,6 +14,107 @@ pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void
     _ = try child.wait(io);
 }
 
+fn hasFile(dir: std.Io.Dir, io: anytype, name: []const u8) bool {
+    _ = dir.statFile(io, name, .{}) catch return false;
+    return true;
+}
+
+fn detectBuildSystem(src_dir: std.Io.Dir, io: anytype) BuildSystem {
+    if (hasFile(src_dir, io, "configure")) return .autotools;
+    if (hasFile(src_dir, io, "CMakeLists.txt")) return .cmake;
+    if (hasFile(src_dir, io, "meson.build")) return .meson;
+    if (hasFile(src_dir, io, "Makefile") or hasFile(src_dir, io, "makefile") or hasFile(src_dir, io, "GNUmakefile")) {
+        return .make;
+    }
+    return .unknown;
+}
+
+pub fn buildAndInstall(init: std.process.Init, src: []const u8) !void {
+    const cwd = std.Io.Dir.cwd();
+    var src_dir = try cwd.openDir(init.io, src, .{});
+    defer src_dir.close(init.io);
+    const allocator = init.arena.allocator();
+    const build_type = detectBuildSystem(src_dir, init.io);
+    const pkg_bin = "/var/zp/pkg";
+    const cpu_count = try std.Thread.getCpuCount();
+    const j_flag = try std.fmt.allocPrint(allocator, "-j{}", .{cpu_count});
+
+    switch (build_type) {
+        .autotools => {
+            const autogen_true_false = hasFile(src_dir, init.io, "configure.ac") or hasFile(src_dir, init.io, "configure.in");
+            if (autogen_true_false) {
+                if (hasFile(src_dir, init.io, "autogen.sh")) {
+                    try runProcess(init.io, &[_][]const u8{ "sh", "./autogen.sh" }, src);
+                } else {
+                    try runProcess(init.io, &[_][]const u8{ "autoreconf", "-fi" }, src);
+                }
+            }
+            try runProcess(init.io, &[_][]const u8{ "./configure", "--prefix=/usr" }, src);
+            try runProcess(init.io, &[_][]const u8{ "make", j_flag }, src);
+            try runProcess(init.io, &[_][]const u8{ "make", "install", try std.fmt.allocPrint(allocator, "DESTDIR={s}", .{pkg_bin}) }, src);
+        },
+        .cmake => {
+            try runProcess(init.io, &[_][]const u8{ "cmake", "-B", "_zb", "-DCMAKE_INSTALL_PREFIX=/usr" }, src);
+            try runProcess(init.io, &[_][]const u8{ "cmake", "--build", "_zb", "--parallel", try std.fmt.allocPrint(allocator, "{}", .{cpu_count}) }, src);
+            try runProcess(init.io, &[_][]const u8{ "cmake", "--install", "_zb" }, src);
+        },
+        .meson => {
+            try runProcess(init.io, &[_][]const u8{ "meson", "setup", "_zb", "--prefix=/usr" }, src);
+            try runProcess(init.io, &[_][]const u8{ "meson", "compile", "-C", "_zb" }, src);
+            try runProcess(init.io, &[_][]const u8{ "meson", "install", "-C", "_zb", "--destdir", pkg_bin }, src);
+        },
+        .make => {
+            try runProcess(init.io, &[_][]const u8{ "make", j_flag }, src);
+            try runProcess(init.io, &[_][]const u8{ "make", "install", try std.fmt.allocPrint(allocator, "DESTDIR={s}", .{pkg_bin}) }, src);
+        },
+        .unknown => {
+            std.log.err("zp: Error: No cmake/make/meson/autotools files found in {s}", .{src});
+            return error.UnknownBuildSystem;
+        },
+    }
+}
+
+pub fn createDirPath(io: anytype, base_dir: std.Io.Dir, path: []const u8) !void {
+    var cur: std.Io.Dir = base_dir;
+    var is_base: bool = true;
+    var it = std.mem.tokenizeScalar(u8, path, '/');
+
+    while (it.next()) |part| {
+        if (part.len == 0) continue;
+        cur.createDir(io, part, .default_dir) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
+        const next_dir = try cur.openDir(io, part, .{});
+        if (!is_base) {
+            cur.close(io);
+        }
+        cur = next_dir;
+        is_base = false;
+    }
+    if (!is_base) {
+        cur.close(io);
+    }
+}
+
+pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest_dir: std.Io.Dir, dest_path_prefix: []const u8) !void {
+    var walker = try src_dir.walk(allocator);
+    defer walker.deinit();
+
+    while (try walker.next(io)) |entry| {
+        var dest_path_buf: [8096]u8 = undefined;
+        const dest_path = if (dest_path_prefix.len == 0 or std.mem.eql(u8, dest_path_prefix, "."))
+            entry.path
+        else
+            try std.fmt.bufPrint(&dest_path_buf, "{s}/{s}", .{ dest_path_prefix, entry.path });
+
+        switch (entry.kind) {
+            .file => try entry.dir.copyFile(entry.basename, dest_dir, dest_path, io, .{}),
+            .directory => try createDirPath(io, dest_dir, dest_path),
+            else => continue,
+        }
+    }
+}
 pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
     var buf: [4096]u8 = undefined;
     const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf);
@@ -28,41 +131,17 @@ pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
 
     var buff: [256]u8 = undefined;
     const src = try std.fmt.bufPrint(&buff, "/var/zp/build/{s}", .{pkg_item});
-    const pkg_bin = "/var/zp/pkg";
 
+    try buildAndInstall(init, src);
+
+    var pkg_dir = try std.Io.Dir.cwd().openDir(init.io, "/var/zp/pkg", .{ .iterate = true });
+    defer pkg_dir.close(init.io);
+
+    var root_dir = try std.Io.Dir.openDirAbsolute(init.io, "/", .{});
+    defer root_dir.close(init.io);
+
+    try copy(init.io, init.arena.allocator(), pkg_dir, root_dir, "");
     var cmd: [4096]u8 = undefined;
-    const build_cmd = try std.fmt.bufPrint(&cmd,
-        \\set -e
-        \\P=/usr
-        \\D={s}
-        \\mkdir -p "$D"
-        \\if [ ! -x ./configure ] && {{ [ -f configure.ac ] || [ -f configure.in ]; }}; then
-        \\  if [ -x ./autogen.sh ]; then ./autogen.sh; else autoreconf -fi; fi
-        \\fi
-        \\if [ -x ./configure ]; then
-        \\  ./configure --prefix=$P
-        \\  make -j$(nproc)
-        \\  make install DESTDIR=$D
-        \\elif [ -f CMakeLists.txt ]; then
-        \\  cmake -B _zb -DCMAKE_INSTALL_PREFIX=$P
-        \\  cmake --build _zb --parallel $(nproc)
-        \\  DESTDIR=$D cmake --install _zb
-        \\elif [ -f meson.build ]; then
-        \\  meson setup _zb --prefix=$P
-        \\  meson compile -C _zb
-        \\  DESTDIR=$D meson install -C _zb
-        \\elif [ -f Makefile ] || [ -f makefile ] || [ -f GNUmakefile ]; then
-        \\  make -j$(nproc)
-        \\  make install DESTDIR=$D
-        \\else
-        \\  echo "zp: Error: No cmake/make/meson files." >&2; exit 1
-        \\fi
-        \\cp -a /var/zp/pkg/. /
-    , .{pkg_bin});
-
-    const argv_make = [_][]const u8{ "sh", "-c", build_cmd };
-    try runProcess(init.io, &argv_make, src);
-
     try removePkgEntry(init, "/var/zp/install/packages.db", pkg_item, &cmd);
 
     var buffer: [4096]u8 = undefined;
@@ -97,8 +176,6 @@ pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8,
     defer open_file.close(init.io);
 
     var reader = open_file.reader(init.io, buffer);
-    var content: std.ArrayList(u8) = .empty;
-    defer content.deinit(init.arena.allocator());
     const tmp_path = "/var/zp/install/packages.db.tmp";
     const tmp_file = try std.Io.Dir.cwd().createFile(init.io, tmp_path, .{});
     defer tmp_file.close(init.io);
