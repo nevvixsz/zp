@@ -57,7 +57,7 @@ pub fn main(init: std.process.Init) !void {
         .help => help(),
         .version => version(),
         .add => if (pkgs.items.len == 0) {
-            std.debug.print("Error: Package unspecified", .{});
+            std.log.err("Package unspecified", .{});
             help();
         } else {
             for (pkgs.items) |pkg| {
