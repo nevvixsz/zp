@@ -76,3 +76,11 @@ pub fn createDir(io: anytype, path: []const u8) !void {
         else => return err,
     };
 }
+
+pub fn createDirComptime(io: anytype, comptime path: []const u8) !void {
+    const dir_create = std.Io.Dir.cwd();
+    dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+}

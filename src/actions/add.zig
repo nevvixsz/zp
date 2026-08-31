@@ -68,7 +68,7 @@ pub fn buildAndInstall(init: std.process.Init, src: []const u8) !void {
             try runProcess(init.io, &[_][]const u8{ "make", "install", try std.fmt.allocPrint(allocator, "DESTDIR={s}", .{pkg_bin}) }, src);
         },
         .unknown => {
-            std.log.err("zp: Error: No cmake/make/meson/autotools files found in {s}", .{src});
+            std.log.err("No cmake/make/meson/autotools files found in {s}", .{src});
             return error.UnknownBuildSystem;
         },
     }
@@ -126,6 +126,9 @@ pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
     var buf: [4096]u8 = undefined;
     const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf, init.arena.allocator());
     const file_name = if (std.mem.lastIndexOfScalar(u8, pkg.url, '/')) |i| pkg.url[i + 1 ..] else pkg.url;
+
+    std.log.info("Install tar file...\n", .{});
+
     const argv = [_][]const u8{ "curl", "-fSL", "-o", file_name, pkg.url };
     try runProcess(init.io, &argv, "/var/zp/install/");
 
@@ -138,7 +141,7 @@ pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
 
     var buff: [256]u8 = undefined;
     const src = try std.fmt.bufPrint(&buff, "/var/zp/build/{s}", .{pkg_item});
-
+    std.log.info("Install '{s}'...\n", .{pkg_item});
     try buildAndInstall(init, src);
 
     var pkg_dir = try std.Io.Dir.cwd().openDir(init.io, "/var/zp/pkg", .{ .iterate = true });

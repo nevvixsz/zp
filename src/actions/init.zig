@@ -1,12 +1,18 @@
 const std = @import("std");
+const createDir = @import("../parser.zig").createDirComptime;
+
+const build: []const u8 = "/var/zp/build";
+const install: []const u8 = "/var/zp/install";
+const mirrors: []const u8 = "/var/zp/mirrors";
+const pkg: []const u8 = "/var/zp/pkg";
 
 pub fn init(io: anytype) !void {
     std.debug.print("Initializing zp...\n", .{});
 
-    try createDir(io, "/var/zp/build");
-    try createDir(io, "/var/zp/install");
-    try createDir(io, "/var/zp/mirrors");
-    try createDir(io, "/var/zp/pkg");
+    try createDir(io, build);
+    try createDir(io, install);
+    try createDir(io, mirrors);
+    try createDir(io, pkg);
 
     const file = try std.Io.Dir.cwd().createFile(io, "/var/zp/mirrors/gen.sh", .{});
     defer file.close(io);
@@ -132,12 +138,4 @@ pub fn init(io: anytype) !void {
     defer packages.close(io);
 
     std.debug.print("Done.\n", .{});
-}
-
-pub fn createDir(io: anytype, path: []const u8) !void {
-    const dir_create: std.Io.Dir = std.Io.Dir.cwd();
-    dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
 }
