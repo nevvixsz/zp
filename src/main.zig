@@ -60,8 +60,15 @@ pub fn main(init: std.process.Init) !void {
             std.log.err("Package unspecified", .{});
             help();
         } else {
-            for (pkgs.items) |pkg| {
-                try add(init, pkg);
+            var threads = try allocator.alloc(std.Thread, pkgs.items.len);
+
+            for (pkgs.items, 0..) |pkg, i| {
+                // try add(init, pkg, allocator);
+                threads[i] = try std.Thread.spawn(.{}, add, .{ init, pkg, allocator });
+            }
+
+            for (threads) |t| {
+                t.join();
             }
         },
         .remove => for (pkgs.items) |pkg| {

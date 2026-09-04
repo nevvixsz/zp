@@ -29,13 +29,12 @@ fn detectBuildSystem(src_dir: std.Io.Dir, io: anytype) BuildSystem {
     return .unknown;
 }
 
-pub fn buildAndInstall(init: std.process.Init, src: []const u8) !void {
+pub fn buildAndInstall(init: std.process.Init, src: []const u8, pkg_bin: []const u8) !void {
     const cwd = std.Io.Dir.cwd();
     var src_dir = try cwd.openDir(init.io, src, .{});
     defer src_dir.close(init.io);
     const allocator = init.arena.allocator();
     const build_type = detectBuildSystem(src_dir, init.io);
-    const pkg_bin = "/var/zp/pkg";
     const cpu_count = try std.Thread.getCpuCount();
     const j_flag = try std.fmt.allocPrint(allocator, "-j{}", .{cpu_count});
 
@@ -122,7 +121,7 @@ pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest
         }
     }
 }
-pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
+pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: anytype) !void {
     var buf: [4096]u8 = undefined;
     const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf, init.arena.allocator());
     const file_name = if (std.mem.lastIndexOfScalar(u8, pkg.url, '/')) |i| pkg.url[i + 1 ..] else pkg.url;
@@ -142,9 +141,12 @@ pub fn add(init: std.process.Init, pkg_item: []const u8) !void {
     var buff: [256]u8 = undefined;
     const src = try std.fmt.bufPrint(&buff, "/var/zp/build/{s}", .{pkg_item});
     std.log.info("Install '{s}'...\n", .{pkg_item});
-    try buildAndInstall(init, src);
+    const pkg_bin = try std.fmt.allocPrint(allocator, "/var/zp/pkg/{s}", .{pkg_item});
+    defer allocator.free(pkg_bin);
+    try p.createDir(init.io, pkg_bin);
+    try buildAndInstall(init, src, pkg_bin);
 
-    var pkg_dir = try std.Io.Dir.cwd().openDir(init.io, "/var/zp/pkg", .{ .iterate = true });
+    var pkg_dir = try std.Io.Dir.cwd().openDir(init.io, pkg_bin, .{ .iterate = true });
     defer pkg_dir.close(init.io);
 
     var root_dir = try std.Io.Dir.openDirAbsolute(init.io, "/", .{});
