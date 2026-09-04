@@ -1,4 +1,5 @@
 const std = @import("std");
+const e = @import("types.zig").ZPError;
 
 pub const Package_Stat = struct {
     name: []const u8,
@@ -15,11 +16,11 @@ pub fn GetPkgStatToInstall(io: anytype, pkg: []const u8, buffer: []u8, allocator
         var tokens = std.mem.tokenizeScalar(u8, line, ' ');
         const name = tokens.next() orelse continue;
         if (!std.mem.eql(u8, name, pkg)) continue;
-        const version = tokens.next() orelse return error.MalformedLine;
-        const url = tokens.next() orelse return error.MalformedLine;
+        const version = tokens.next() orelse return e.VersionNotFound;
+        const url = tokens.next() orelse return e.NoURLFound;
         return .{ .name = try allocator.dupe(u8, name), .version = try allocator.dupe(u8, version), .url = try allocator.dupe(u8, url) };
     }
-    return error.PackageNotFound;
+    return e.PkgNotFound;
 }
 
 pub fn getName(io: anytype, pkg: []const u8, buffer: []u8) !bool {

@@ -17,8 +17,8 @@ pub fn updatePkg(init: std.process.Init, pkg_name: []const u8, allocator: anytyp
         }
 
         if (!std.mem.eql(u8, iv, pkg.version)) {
-            std.debug.print("Updating {s}: {s} → {s}\n", .{ pkg_name, iv, pkg.version });
-            try a.add(init, pkg_name);
+            std.log.info("Updating {s}: {s} → {s}\n", .{ pkg_name, iv, pkg.version });
+            try a.add(init, pkg_name, allocator);
         } else {
             std.debug.print("{s} is up to date ({s})\n", .{ pkg_name, iv });
         }
@@ -31,7 +31,7 @@ pub fn updateAll(init: std.process.Init) !void {
     var buffer: [4096]u8 = undefined;
     const file = std.Io.Dir.cwd().openFile(init.io, "/var/zp/install/packages.db", .{}) catch |err| {
         if (err == error.FileNotFound) {
-            std.debug.print("No installed packages found\n", .{});
+            std.log.err("No installed packages found\n", .{});
             return;
         }
         return err;
