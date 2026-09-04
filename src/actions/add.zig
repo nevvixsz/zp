@@ -1,7 +1,7 @@
 const std = @import("std");
 const p = @import("../parser.zig");
 
-const BuildSystem = enum { autotools, cmake, meson, make, unknown };
+const BuildSystem = enum { autotools, cmake, meson, make, unknown, cargo, zig, setup_py };
 
 pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void {
     var child = try std.process.spawn(io, .{
@@ -20,6 +20,10 @@ fn hasFile(dir: std.Io.Dir, io: anytype, name: []const u8) bool {
 }
 
 fn detectBuildSystem(src_dir: std.Io.Dir, io: anytype) BuildSystem {
+    if (hasFile(src_dir, io, "Cargo.toml")) return .cargo;
+    if (hasFile(src_dir, io, "setup.py")) return .setup_py;
+    if (hasFile(src_dir, io, "pyproject.toml")) return .setup_py;
+    if (hasFile(src_dir, io, "build.zig")) return .zig;
     if (hasFile(src_dir, io, "configure")) return .autotools;
     if (hasFile(src_dir, io, "CMakeLists.txt")) return .cmake;
     if (hasFile(src_dir, io, "meson.build")) return .meson;
@@ -66,8 +70,50 @@ pub fn buildAndInstall(init: std.process.Init, src: []const u8, pkg_bin: []const
             try runProcess(init.io, &[_][]const u8{ "make", j_flag }, src);
             try runProcess(init.io, &[_][]const u8{ "make", "install", try std.fmt.allocPrint(allocator, "DESTDIR={s}", .{pkg_bin}) }, src);
         },
+        .cargo => {
+            const argv = [_][]const u8{
+                "cargo",
+                "install",
+                "--root",
+                pkg_bin,
+                "--path",
+                ".",
+            };
+            try runProcess(init.io, &argv, src);
+        },
+        .setup_py => {
+            const argv_setup = [_][]const u8{
+                "python",
+                "setup.py",
+                "install",
+                "--prefix=/usr",
+                try std.fmt.allocPrint(allocator, "--root={s}", .{pkg_bin}),
+            };
+            try runProcess(init.io, &argv_setup, src);
+            if (hasFile(src_dir, init.io, "pyproject.toml")) {
+                const argv_pip = [_][]const u8{
+                    "pip",
+                    "install",
+                    "--prefix=/usr",
+                    try std.fmt.allocPrint(allocator, "--root={s}", .{pkg_bin}),
+                    ".",
+                };
+                try runProcess(init.io, &argv_pip, src);
+            }
+        },
+        .zig => {
+            const argv = [_][]const u8{
+                "zig",
+                "build",
+                "install",
+                "--prefix",
+                "/usr",
+                try std.fmt.allocPrint(allocator, "--sysroot={s}", .{pkg_bin}),
+            };
+            try runProcess(init.io, &argv, src);
+        },
         .unknown => {
-            std.log.err("No cmake/make/meson/autotools files found in {s}", .{src});
+            std.log.err("No make files found in {s}", .{src});
             return error.UnknownBuildSystem;
         },
     }
