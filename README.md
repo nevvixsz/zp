@@ -1,4 +1,3 @@
-```markdown
 # zp
 
 Source-based package manager written in Zig.
@@ -230,4 +229,4 @@ Issues and pull requests welcome. This is a learning project — expect rough ed
 3. Commit changes: `git commit -m "feat: description"`
 4. Push to fork: `git push origin feature/my-feature`
 5. Create pull request to `understrata/zp`
-```
+
