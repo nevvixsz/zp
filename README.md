@@ -215,7 +215,7 @@ zig build -Doptimize=ReleaseSafe
 
 ## License
 
-MIT © [understrata](https://github.com/understrata)
+MIT © [nevvixsz](https://github.com/understrata)
 
 ---
 
