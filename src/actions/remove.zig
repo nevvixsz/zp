@@ -47,7 +47,7 @@ pub fn remove(init: std.process.Init, pkg_item: []const u8) !void {
     std.debug.print("Package '{s}' removed successfully\n", .{pkg_item});
 }
 
-pub fn removeEmptyDirs(io: anytype, allocator: anytype, file_paths: std.ArrayList([]const u8), root_dir: std.Io.Dir) !void {
+pub fn removeEmptyDirs(io: anytype, allocator: std.mem.Allocator, file_paths: std.ArrayList([]const u8), root_dir: std.Io.Dir) !void {
     var dir_list: std.ArrayList([]const u8) = .empty;
     defer {
         for (dir_list.items) |item| allocator.free(item);

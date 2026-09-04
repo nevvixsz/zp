@@ -1,14 +1,15 @@
 const std = @import("std");
-const e = @import("types.zig").ZPError;
+const e = @import("types.zig").Error;
+const Dir = std.Io.Dir;
 
-pub const Package_Stat = struct {
+pub const PkgStat = struct {
     name: []const u8,
     version: []const u8,
     url: []const u8,
 };
 
-pub fn GetPkgStatToInstall(io: anytype, pkg: []const u8, buffer: []u8, allocator: anytype) !Package_Stat {
-    const file = try std.Io.Dir.cwd().openFile(io, "/var/zp/mirrors/zp.packages", .{});
+pub fn GetPkgStatToInstall(io: anytype, pkg: []const u8, buffer: []u8, allocator: std.mem.Allocator) !PkgStat {
+    const file = try Dir.cwd().openFile(io, "/var/zp/mirrors/zp.packages", .{});
     defer file.close(io);
 
     var reader = file.reader(io, buffer);
@@ -24,7 +25,7 @@ pub fn GetPkgStatToInstall(io: anytype, pkg: []const u8, buffer: []u8, allocator
 }
 
 pub fn getName(io: anytype, pkg: []const u8, buffer: []u8) !bool {
-    const file = try std.Io.Dir.cwd().openFile(io, "/var/zp/mirrors/zp.packages", .{});
+    const file = try Dir.cwd().openFile(io, "/var/zp/mirrors/zp.packages", .{});
     defer file.close(io);
 
     var reader = file.reader(io, buffer);
@@ -39,8 +40,8 @@ pub fn getName(io: anytype, pkg: []const u8, buffer: []u8) !bool {
     return false;
 }
 
-pub fn getInstalledVersion(io: anytype, pkg: []const u8, buffer: []u8, allocator: anytype) !?[]const u8 {
-    const file = std.Io.Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{}) catch return null;
+pub fn getInstalledVersion(io: anytype, pkg: []const u8, buffer: []u8, allocator: std.mem.Allocator) !?[]const u8 {
+    const file = Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{}) catch return null;
     defer file.close(io);
 
     var reader = file.reader(io, buffer);
@@ -54,8 +55,8 @@ pub fn getInstalledVersion(io: anytype, pkg: []const u8, buffer: []u8, allocator
     return null;
 }
 
-pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: anytype) !std.ArrayList([]const u8) {
-    const file = try std.Io.Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{});
+pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: std.mem.Allocator) !std.ArrayList([]const u8) {
+    const file = try Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{});
     defer file.close(io);
     var massive: std.ArrayList([]const u8) = .empty;
 
@@ -71,7 +72,7 @@ pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: anytype) !std.Arra
 }
 
 pub fn createDir(io: anytype, path: []const u8) !void {
-    const dir_create: std.Io.Dir = std.Io.Dir.cwd();
+    const dir_create: Dir = Dir.cwd();
     dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
@@ -79,7 +80,7 @@ pub fn createDir(io: anytype, path: []const u8) !void {
 }
 
 pub fn createDirComptime(io: anytype, comptime path: []const u8) !void {
-    const dir_create = std.Io.Dir.cwd();
+    const dir_create = Dir.cwd();
     dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
