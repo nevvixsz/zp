@@ -2,7 +2,7 @@ const std = @import("std");
 const p = @import("../parser.zig");
 const a = @import("add.zig");
 
-pub fn updatePkg(init: std.process.Init, pkg_name: []const u8, allocator: anytype) !void {
+pub fn updatePkg(init: std.process.Init, pkg_name: []const u8, allocator: std.mem.Allocator) !void {
     var buffer: [4096]u8 = undefined;
     const installed_ver = try p.getInstalledVersion(init.io, pkg_name, &buffer, allocator);
 

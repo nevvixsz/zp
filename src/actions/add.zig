@@ -1,5 +1,6 @@
 const std = @import("std");
 const p = @import("../parser.zig");
+const Dir = std.Io.Dir;
 
 const BuildSystem = enum { autotools, cmake, meson, make, unknown, cargo, zig, setup_py };
 
@@ -14,12 +15,12 @@ pub fn runProcess(io: anytype, argv: []const []const u8, path: []const u8) !void
     _ = try child.wait(io);
 }
 
-fn hasFile(dir: std.Io.Dir, io: anytype, name: []const u8) bool {
+fn hasFile(dir: Dir, io: anytype, name: []const u8) bool {
     _ = dir.statFile(io, name, .{}) catch return false;
     return true;
 }
 
-fn detectBuildSystem(src_dir: std.Io.Dir, io: anytype) BuildSystem {
+fn detectBuildSystem(src_dir: Dir, io: anytype) BuildSystem {
     if (hasFile(src_dir, io, "Cargo.toml")) return .cargo;
     if (hasFile(src_dir, io, "setup.py")) return .setup_py;
     if (hasFile(src_dir, io, "pyproject.toml")) return .setup_py;
@@ -34,7 +35,7 @@ fn detectBuildSystem(src_dir: std.Io.Dir, io: anytype) BuildSystem {
 }
 
 pub fn buildAndInstall(init: std.process.Init, src: []const u8, pkg_bin: []const u8) !void {
-    const cwd = std.Io.Dir.cwd();
+    const cwd = Dir.cwd();
     var src_dir = try cwd.openDir(init.io, src, .{});
     defer src_dir.close(init.io);
     const allocator = init.arena.allocator();
@@ -119,8 +120,8 @@ pub fn buildAndInstall(init: std.process.Init, src: []const u8, pkg_bin: []const
     }
 }
 
-pub fn createDirPath(io: anytype, base_dir: std.Io.Dir, path: []const u8) !void {
-    var cur: std.Io.Dir = base_dir;
+pub fn createDirPath(io: anytype, base_dir: Dir, path: []const u8) !void {
+    var cur: Dir = base_dir;
     var is_base: bool = true;
     var it = std.mem.tokenizeScalar(u8, path, '/');
 
@@ -142,7 +143,7 @@ pub fn createDirPath(io: anytype, base_dir: std.Io.Dir, path: []const u8) !void 
     }
 }
 
-pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest_dir: std.Io.Dir, dest_path_prefix: []const u8, list_file: std.Io.File) !void {
+pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: Dir, dest_dir: Dir, dest_path_prefix: []const u8, list_file: std.Io.File) !void {
     var walker = try src_dir.walk(allocator);
     defer walker.deinit();
 
@@ -167,7 +168,7 @@ pub fn copy(io: anytype, allocator: std.mem.Allocator, src_dir: std.Io.Dir, dest
         }
     }
 }
-pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: anytype) !void {
+pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: std.mem.Allocator) !void {
     var buf: [4096]u8 = undefined;
     const pkg = try p.GetPkgStatToInstall(init.io, pkg_item, &buf, init.arena.allocator());
     const file_name = if (std.mem.lastIndexOfScalar(u8, pkg.url, '/')) |i| pkg.url[i + 1 ..] else pkg.url;
@@ -192,21 +193,21 @@ pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: anytype) !vo
     try p.createDir(init.io, pkg_bin);
     try buildAndInstall(init, src, pkg_bin);
 
-    var pkg_dir = try std.Io.Dir.cwd().openDir(init.io, pkg_bin, .{ .iterate = true });
+    var pkg_dir = try Dir.cwd().openDir(init.io, pkg_bin, .{ .iterate = true });
     defer pkg_dir.close(init.io);
 
-    var root_dir = try std.Io.Dir.openDirAbsolute(init.io, "/", .{});
+    var root_dir = try Dir.openDirAbsolute(init.io, "/", .{});
     defer root_dir.close(init.io);
 
     var list_path_buf: [256]u8 = undefined;
     const list_path = try std.fmt.bufPrint(&list_path_buf, "/var/zp/installed/{s}.list", .{pkg_item});
 
-    std.Io.Dir.cwd().createDir(init.io, "/var/zp/installed", .default_dir) catch |err| switch (err) {
+    Dir.cwd().createDir(init.io, "/var/zp/installed", .default_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
 
-    const list_file = try std.Io.Dir.cwd().createFile(init.io, list_path, .{ .truncate = true });
+    const list_file = try Dir.cwd().createFile(init.io, list_path, .{ .truncate = true });
     defer list_file.close(init.io);
 
     try copy(init.io, init.arena.allocator(), pkg_dir, root_dir, "", list_file);
@@ -220,9 +221,9 @@ pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: anytype) !vo
 pub fn writeFile(init: std.process.Init, file: []const u8, pkg: []const u8, version: []const u8, buffer: []u8) !void {
     try removePkgEntry(init, file, pkg, buffer);
     const clean_version = std.mem.trim(u8, version, "\n\r ");
-    const open_file = std.Io.Dir.cwd().openFile(init.io, file, .{ .mode = .read_write }) catch |err| {
+    const open_file = Dir.cwd().openFile(init.io, file, .{ .mode = .read_write }) catch |err| {
         if (err == error.FileNotFound) {
-            const new_file = try std.Io.Dir.cwd().createFile(init.io, file, .{});
+            const new_file = try Dir.cwd().createFile(init.io, file, .{});
             defer new_file.close(init.io);
             const name_version = try std.fmt.bufPrint(buffer, "{s} {s}\n", .{ pkg, clean_version });
             const stat = try new_file.stat(init.io);
@@ -241,12 +242,12 @@ pub fn writeFile(init: std.process.Init, file: []const u8, pkg: []const u8, vers
 }
 
 pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8, buffer: []u8) !void {
-    const open_file = std.Io.Dir.cwd().openFile(init.io, file, .{}) catch return;
+    const open_file = Dir.cwd().openFile(init.io, file, .{}) catch return;
     defer open_file.close(init.io);
 
     var reader = open_file.reader(init.io, buffer);
     const tmp_path = "/var/zp/install/packages.db.tmp";
-    const tmp_file = try std.Io.Dir.cwd().createFile(init.io, tmp_path, .{});
+    const tmp_file = try Dir.cwd().createFile(init.io, tmp_path, .{});
     defer tmp_file.close(init.io);
 
     while (try reader.interface.takeDelimiter('\n')) |line| {
@@ -262,6 +263,6 @@ pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8,
         _ = try tmp_file.writePositionalAll(init.io, line_with_newline, size);
     }
 
-    const cwd = std.Io.Dir.cwd();
+    const cwd = Dir.cwd();
     try cwd.rename(tmp_path, cwd, file, init.io);
 }
