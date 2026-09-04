@@ -213,12 +213,6 @@ zig build -Doptimize=ReleaseSafe
 
 ---
 
-## License
-
-MIT © [nevvixsz](https://github.com/understrata)
-
----
-
 ## Contributing
 
 Issues and pull requests welcome. This is a learning project — expect rough edges.
@@ -230,3 +224,9 @@ Issues and pull requests welcome. This is a learning project — expect rough ed
 4. Push to fork: `git push origin feature/my-feature`
 5. Create pull request to `understrata/zp`
 
+---
+
+
+## License
+
+MIT © [nevvixsz](https://github.com/understrata)
