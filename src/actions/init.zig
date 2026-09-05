@@ -1,20 +1,42 @@
 const std = @import("std");
-const createDir = @import("../parser.zig").createDirComptime;
+const Dir = std.Io.Dir;
 
-const build: []const u8 = "/var/zp/build";
-const install: []const u8 = "/var/zp/install";
-const mirrors: []const u8 = "/var/zp/mirrors";
-const pkg: []const u8 = "/var/zp/pkg";
+pub fn createDirectories(io: anytype, root: []const u8) !void {
+    var path_buf: [256]u8 = undefined;
+    const dir = Dir.cwd();
+
+    var path_len: usize = if (root[0] == '/') 1 else 0;
+    if (path_len == 1) path_buf[0] = '/';
+    var parts = std.mem.tokenizeScalar(u8, root, '/');
+    while (parts.next()) |part| {
+        if (path_len > 1) {
+            path_buf[path_len] = '/';
+            path_len += 1;
+        }
+        @memcpy(path_buf[path_len..][0..part.len], part);
+        path_len += part.len;
+        const path = path_buf[0..path_len];
+        dir.createDir(io, path, .default_dir) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
+    }
+
+    for ([_][]const u8{ "build", "install", "mirrors", "pkg" }) |part| {
+        const path = try std.fmt.bufPrint(&path_buf, "{s}/{s}", .{ root, part });
+        dir.createDir(io, path, .default_dir) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
+    }
+}
 
 pub fn init(io: anytype) !void {
     std.debug.print("Initializing zp...\n", .{});
 
-    try createDir(io, build);
-    try createDir(io, install);
-    try createDir(io, mirrors);
-    try createDir(io, pkg);
+    try createDirectories(io, "/var/zp");
 
-    const file = try std.Io.Dir.cwd().createFile(io, "/var/zp/mirrors/gen.sh", .{});
+    const file = try Dir.createFileAbsolute(io, "/var/zp/mirrors/gen.sh", .{});
     defer file.close(io);
 
     const cmd =
@@ -127,15 +149,34 @@ pub fn init(io: anytype) !void {
         \\
         \\echo "zp: base ready -> $OUT  (packages: $(wc -l < "$OUT"))"
     ;
-    //chmod +x /var/zp/mirrors/gen.sh
-    //touch /var/zp/install/packages.db
+
     const stat = try file.stat(io);
-    const size = stat.size;
-    try file.writePositionalAll(io, cmd, size);
+
+    try file.writePositionalAll(io, cmd, stat.size);
     try file.setPermissions(io, std.Io.File.Permissions.fromMode(0o755));
 
-    const packages = try std.Io.Dir.cwd().createFile(io, "/var/zp/install/packages.db", .{});
-    defer packages.close(io);
+    const pkgs = try Dir.createFileAbsolute(io, "/var/zp/install/packages.db", .{});
+    defer pkgs.close(io);
 
     std.debug.print("Done.\n", .{});
+}
+
+test "createDirectories creates nested init paths" {
+    const io = std.testing.io;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    var path_buf: [256]u8 = undefined;
+    const root = try std.fmt.bufPrint(&path_buf, ".zig-cache/tmp/{s}/var/zp", .{tmp.sub_path});
+
+    try createDirectories(io, root);
+    try createDirectories(io, root);
+
+    var root_dir = try Dir.cwd().openDir(io, root, .{});
+    defer root_dir.close(io);
+
+    for ([_][]const u8{ "build", "install", "mirrors", "pkg" }) |path| {
+        var child = try root_dir.openDir(io, path, .{});
+        child.close(io);
+    }
 }

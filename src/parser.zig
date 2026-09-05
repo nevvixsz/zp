@@ -9,7 +9,7 @@ pub const PkgStat = struct {
 };
 
 pub fn GetPkgStatToInstall(io: anytype, pkg: []const u8, buffer: []u8, allocator: std.mem.Allocator) !PkgStat {
-    const file = try Dir.cwd().openFile(io, "/var/zp/mirrors/zp.packages", .{});
+    const file = try Dir.openFileAbsolute(io, "/var/zp/mirrors/zp.packages", .{});
     defer file.close(io);
 
     var reader = file.reader(io, buffer);
@@ -25,7 +25,7 @@ pub fn GetPkgStatToInstall(io: anytype, pkg: []const u8, buffer: []u8, allocator
 }
 
 pub fn getName(io: anytype, pkg: []const u8, buffer: []u8) !bool {
-    const file = try Dir.cwd().openFile(io, "/var/zp/mirrors/zp.packages", .{});
+    const file = try Dir.openFileAbsolute(io, "/var/zp/mirrors/zp.packages", .{});
     defer file.close(io);
 
     var reader = file.reader(io, buffer);
@@ -41,7 +41,7 @@ pub fn getName(io: anytype, pkg: []const u8, buffer: []u8) !bool {
 }
 
 pub fn getInstalledVersion(io: anytype, pkg: []const u8, buffer: []u8, allocator: std.mem.Allocator) !?[]const u8 {
-    const file = Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{}) catch return null;
+    const file = Dir.openFileAbsolute(io, "/var/zp/install/packages.db", .{}) catch return null;
     defer file.close(io);
 
     var reader = file.reader(io, buffer);
@@ -56,7 +56,7 @@ pub fn getInstalledVersion(io: anytype, pkg: []const u8, buffer: []u8, allocator
 }
 
 pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: std.mem.Allocator) !std.ArrayList([]const u8) {
-    const file = try Dir.cwd().openFile(io, "/var/zp/install/packages.db", .{});
+    const file = try Dir.openFileAbsolute(io, "/var/zp/install/packages.db", .{});
     defer file.close(io);
     var massive: std.ArrayList([]const u8) = .empty;
 
@@ -69,20 +69,4 @@ pub fn GetInstalledPkgs(io: anytype, buffer: []u8, allocator: std.mem.Allocator)
         try massive.append(allocator, name_copy);
     }
     return massive;
-}
-
-pub fn createDir(io: anytype, path: []const u8) !void {
-    const dir_create: Dir = Dir.cwd();
-    dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
-}
-
-pub fn createDirComptime(io: anytype, comptime path: []const u8) !void {
-    const dir_create = Dir.cwd();
-    dir_create.createDir(io, path, .default_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
 }
