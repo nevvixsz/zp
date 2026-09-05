@@ -35,8 +35,7 @@ fn detectBuildSystem(src_dir: Dir, io: anytype) BuildSystem {
 }
 
 pub fn buildAndInstall(init: std.process.Init, src: []const u8, pkg_bin: []const u8) !void {
-    const cwd = Dir.cwd();
-    var src_dir = try cwd.openDir(init.io, src, .{});
+    var src_dir = try Dir.openDirAbsolute(init.io, src, .{});
     defer src_dir.close(init.io);
     const allocator = init.arena.allocator();
     const build_type = detectBuildSystem(src_dir, init.io);
@@ -180,7 +179,7 @@ pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: std.mem.Allo
 
     var tar_cmd_buf: [8096]u8 = undefined;
 
-    try p.createDir(init.io, try std.fmt.bufPrint(&tar_cmd_buf, "/var/zp/build/{s}", .{pkg_item}));
+    try Dir.createDirAbsolute(init.io, try std.fmt.bufPrint(&tar_cmd_buf, "/var/zp/build/{s}", .{pkg_item}), .default_dir);
     const tar_cmd = try std.fmt.bufPrint(&tar_cmd_buf, "tar -xf /var/zp/install/{s} -C /var/zp/build/{s} --strip-components=1", .{ file_name, pkg_item });
     const argv_tar = [_][]const u8{ "sh", "-c", tar_cmd };
     try runProcess(init.io, &argv_tar, "/var/zp/install/");
@@ -190,10 +189,10 @@ pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: std.mem.Allo
     std.log.info("Install '{s}'...\n", .{pkg_item});
     const pkg_bin = try std.fmt.allocPrint(allocator, "/var/zp/pkg/{s}", .{pkg_item});
     defer allocator.free(pkg_bin);
-    try p.createDir(init.io, pkg_bin);
+    try Dir.createDirAbsolute(init.io, pkg_bin, .default_dir);
     try buildAndInstall(init, src, pkg_bin);
 
-    var pkg_dir = try Dir.cwd().openDir(init.io, pkg_bin, .{ .iterate = true });
+    var pkg_dir = try Dir.openDirAbsolute(init.io, pkg_bin, .{ .iterate = true });
     defer pkg_dir.close(init.io);
 
     var root_dir = try Dir.openDirAbsolute(init.io, "/", .{});
@@ -202,12 +201,12 @@ pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: std.mem.Allo
     var list_path_buf: [256]u8 = undefined;
     const list_path = try std.fmt.bufPrint(&list_path_buf, "/var/zp/installed/{s}.list", .{pkg_item});
 
-    Dir.cwd().createDir(init.io, "/var/zp/installed", .default_dir) catch |err| switch (err) {
+    Dir.createDirAbsolute(init.io, "/var/zp/installed", .default_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
         else => return err,
     };
 
-    const list_file = try Dir.cwd().createFile(init.io, list_path, .{ .truncate = true });
+    const list_file = try Dir.createFileAbsolute(init.io, list_path, .{ .truncate = true });
     defer list_file.close(init.io);
 
     try copy(init.io, init.arena.allocator(), pkg_dir, root_dir, "", list_file);
@@ -221,9 +220,9 @@ pub fn add(init: std.process.Init, pkg_item: []const u8, allocator: std.mem.Allo
 pub fn writeFile(init: std.process.Init, file: []const u8, pkg: []const u8, version: []const u8, buffer: []u8) !void {
     try removePkgEntry(init, file, pkg, buffer);
     const clean_version = std.mem.trim(u8, version, "\n\r ");
-    const open_file = Dir.cwd().openFile(init.io, file, .{ .mode = .read_write }) catch |err| {
+    const open_file = Dir.openFileAbsolute(init.io, file, .{ .mode = .read_write }) catch |err| {
         if (err == error.FileNotFound) {
-            const new_file = try Dir.cwd().createFile(init.io, file, .{});
+            const new_file = try Dir.createFileAbsolute(init.io, file, .{});
             defer new_file.close(init.io);
             const name_version = try std.fmt.bufPrint(buffer, "{s} {s}\n", .{ pkg, clean_version });
             const stat = try new_file.stat(init.io);
@@ -242,12 +241,12 @@ pub fn writeFile(init: std.process.Init, file: []const u8, pkg: []const u8, vers
 }
 
 pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8, buffer: []u8) !void {
-    const open_file = Dir.cwd().openFile(init.io, file, .{}) catch return;
+    const open_file = Dir.openFileAbsolute(init.io, file, .{}) catch return;
     defer open_file.close(init.io);
 
     var reader = open_file.reader(init.io, buffer);
     const tmp_path = "/var/zp/install/packages.db.tmp";
-    const tmp_file = try Dir.cwd().createFile(init.io, tmp_path, .{});
+    const tmp_file = try Dir.createFileAbsolute(init.io, tmp_path, .{});
     defer tmp_file.close(init.io);
 
     while (try reader.interface.takeDelimiter('\n')) |line| {
@@ -263,6 +262,5 @@ pub fn removePkgEntry(init: std.process.Init, file: []const u8, pkg: []const u8,
         _ = try tmp_file.writePositionalAll(init.io, line_with_newline, size);
     }
 
-    const cwd = Dir.cwd();
-    try cwd.rename(tmp_path, cwd, file, init.io);
+    try Dir.renameAbsolute(tmp_path, file, init.io);
 }
