@@ -98,7 +98,7 @@ htop 3.5.3 https://github.com/htop-dev/htop/releases/download/3.5.3/htop-3.5.3.t
 ## Requirements
 
 - **Zig 0.16** (compiler)
-- **Build tools:** `git`, `curl`, `tar`, `bash`, `awk`
+- **Build tools:** `git`, `curl`, `tar`, `bash`, `awk`, `cargo` (for rust pkgs), `python` (for python pkgs)
 - **C toolchain:** `gcc`, `make` (for building packages)
 
 ---
