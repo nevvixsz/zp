@@ -29,6 +29,9 @@ Fetch. Build. Install. From source — no prebuilt binaries.
   - `configure` (autotools)
   - `CMakeLists.txt` (cmake)
   - `meson.build` (meson)
+  - `setup.py` (python)
+  - `cargo build` (rust)
+  - `build.zig` (zig)
   - `Makefile` / `makefile` / `GNUmakefile` (make)
 - **Multi-source package database** — aggregates recipes from Void, CRUX, and KISS Linux
 - **Deterministic deduplication** — one name = one package, priority: `void > crux > kiss`
