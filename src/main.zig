@@ -1,5 +1,5 @@
 const std = @import("std");
-const initialize = @import("actions/init.zig").init;
+const initialize = @import("actions/sync.zig").init;
 const help = @import("actions/help.zig").help;
 const version = @import("actions/version.zig").version;
 const add = @import("actions/add.zig").add;
